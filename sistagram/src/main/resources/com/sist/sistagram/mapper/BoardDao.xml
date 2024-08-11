@@ -1,0 +1,231 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.sist.web.dao.BoardDao">
+
+	<!-- 게시물 resultMap -->
+	<resultMap type="com.sist.web.model.Board" id="boardResultMap">
+		<id column="BOARD_NUM" property="boardNum" />
+		<result column="USER_ID" property="userId" />	
+		<result column="BOARD_CONTENT" property="boardContent" />	
+		<result column="LIKE_CNT" property="likeCnt" />	
+		<result column="REG_DATE" property="regDate" />		
+		<result column="USER_FILE_NAME" property="userFileName" />	
+		<result column="USER_NAME" property="userName" />	
+		<result column="STATUS" property="status" />
+		
+		<association property="boardFile" resultMap="boardFileResultMap"/>
+	</resultMap>
+	
+	<!-- 첨부파일 resultMap -->
+	<resultMap id="boardFileResultMap" type="com.sist.web.model.BoardFile">
+		<id column="BOARD_NUM" property="boardNum" />
+		<id column="FILE_NUM" property="fileNum" />
+		<result column="FILE_ORG_NAME" property="fileOrgName" />
+		<result column="FILE_NAME" property="fileName" />
+		<result column="FILE_EXT" property="fileExt" />
+		<result column="FILE_SIZE" property="fileSize" />
+		<result column="REG_DATE" property="regDate" />
+	</resultMap>
+	
+	<!-- 게시물 조회 -->
+	<select id="boardList" parameterType="com.sist.web.model.Board" resultMap="boardResultMap">
+		SELECT BOARD_NUM,
+			   USER_FILE_NAME,
+	           USER_ID,
+	           FILE_NAME,
+	           BOARD_CONTENT,
+	           LIKE_CNT,
+	           REG_DATE
+		  FROM (SELECT ROWNUM AS RNUM,
+		               BOARD_NUM,
+		               USER_FILE_NAME,
+		               USER_ID,
+		               FILE_NAME,
+		               BOARD_CONTENT,
+		               LIKE_CNT,
+		               REG_DATE
+		          FROM (SELECT A.BOARD_NUM,
+		                       NVL(D.FILE_NAME, '/prof.png') AS USER_FILE_NAME,
+		                       NVL(B.USER_ID, ' ') AS USER_ID,
+		                       NVL(C.FILE_NAME, '/default.png') AS FILE_NAME,
+		                       NVL(A.BOARD_CONTENT, ' ') AS BOARD_CONTENT,
+		                       NVL(A.LIKE_CNT, 0) AS LIKE_CNT,
+		                       NVL(TO_CHAR(A.REG_DATE, 'YYYY.MM.DD HH24:MI:SS'), ' ') AS REG_DATE
+		                  FROM INS_BOARD A, INS_USER B, INS_BOARD_FILE C, INS_USER_FILE D
+		                 WHERE A.USER_ID = B.USER_ID
+		                   AND B.USER_ID = D.USER_ID
+		                   AND A.BOARD_NUM = C.BOARD_NUM(+)
+		                 ORDER BY DBMS_RANDOM.VALUE))
+		 WHERE RNUM <![CDATA[>=]]> #{startRow}
+		   AND RNUM <![CDATA[<=]]> #{endRow}
+	</select>
+	
+	<!-- 총 게시물 수 조회 -->
+	<select id="boardListCount" parameterType="com.sist.web.model.Board" resultType="long">
+		SELECT COUNT(BOARD_NUM) AS CNT
+		  FROM INS_BOARD		
+	</select>
+
+	<!-- 게시물 등록 -->
+	<insert id="boardInsert" parameterType="com.sist.web.model.Board">
+		<!-- boardNum 선행처리기 -->
+		<selectKey resultType="long" keyProperty="boardNum" order="BEFORE">
+			SELECT INS_BOARD_SEQ.NEXTVAL FROM DUAL
+		</selectKey>
+		
+		INSERT INTO INS_BOARD (
+			    BOARD_NUM,
+			    USER_ID,
+			    BOARD_CONTENT,
+			    LIKE_CNT,
+			    REG_DATE
+		    ) VALUES (
+		        #{boardNum}, 
+		        #{userId}, 
+		        #{boardContent}, 
+		        0, 
+		        SYSDATE)
+	</insert>
+	
+	<!-- 첨부파일 등록 -->
+	<insert id="boardFileInsert" parameterType="com.sist.web.model.BoardFile">
+		INSERT INTO INS_BOARD_FILE (
+		        BOARD_NUM,
+		        FILE_NUM,
+		        FILE_ORG_NAME,
+		        FILE_NAME,
+		        FILE_EXT,
+		        FILE_SIZE,
+		        REG_DATE
+	    ) VALUES (
+	        #{boardNum},
+	        (SELECT NVL(MAX(FILE_NUM), 0) + 1 AS FILE_NUM
+	           FROM INS_BOARD_FILE
+	          WHERE BOARD_NUM = #{boardNum}),
+	        #{fileOrgName},
+	        #{fileName},
+	        #{fileExt},
+	        #{fileSize},
+	        SYSDATE
+	    )
+	</insert>
+	
+	<!-- 첨부파일 조회 -->    <!-- boardNum은 시퀀스(long)타입 -->
+	<select id="boardFileSelect" parameterType="long" resultMap="boardFileResultMap">
+		SELECT BOARD_NUM,
+	           FILE_NUM,
+	           NVL(FILE_ORG_NAME, ' ') AS FILE_ORG_NAME,
+	           NVL(FILE_NAME, '/default.png') AS FILE_NAME,
+	           NVL(FILE_EXT, ' ') AS FILE_EXT,
+	           NVL(FILE_SIZE, 0) AS FILE_SIZE,
+	           NVL(TO_CHAR(REG_DATE, 'YYYY.MM.DD HH24:MI:SS'), ' ') AS REG_DATE
+		  FROM INS_BOARD_FILE
+		 WHERE BOARD_NUM = #{boardNum}
+		   AND FILE_NUM = 1
+	</select>
+	
+	<!-- 프로필 사용자가 쓴 게시물의 첨부파일 조회  -->
+	<select id="userBoardList" parameterType="String" resultMap="boardResultMap">
+		SELECT A.BOARD_NUM,
+			   NVL(B.FILE_NAME, '/default.png') AS FILE_NAME
+		  FROM INS_BOARD A, INS_BOARD_FILE B
+		 WHERE A.USER_ID = #{userId}
+		   AND A.BOARD_NUM = B.BOARD_NUM(+)
+		 ORDER BY A.REG_DATE DESC
+	</select>
+	
+	<!-- 프로필 사용자가 작성한 게시물에 대한 총 게시물 수 -->
+	<select id="userBoardListCount" parameterType="String" resultType="long">
+		SELECT COUNT(BOARD_NUM) AS CNT
+		  FROM INS_BOARD
+		 WHERE USER_ID = #{userId}
+	</select>
+	
+	<!-- 게시물 상세 건 조회 -->
+	<select id="boardView" parameterType="long" resultMap="boardResultMap">
+		SELECT A.BOARD_NUM,
+	           NVL(B.FILE_NAME, '/default.png') AS FILE_NAME,
+	           NVL(C.FILE_NAME, '/prof.png') AS USER_FILE_NAME,
+	           NVL(A.USER_ID, ' ') AS USER_ID,
+	           NVL(A.BOARD_CONTENT, ' ') AS BOARD_CONTENT,
+	           NVL(A.LIKE_CNT, 0) AS LIKE_CNT,
+	           NVL(TO_CHAR(A.REG_DATE, 'YYYY.MM.DD'), ' ') AS REG_DATE
+		  FROM INS_BOARD A, INS_BOARD_FILE B, INS_USER_FILE C
+		 WHERE A.BOARD_NUM = #{boardNum}
+		   AND A.USER_ID = C.USER_ID(+)
+	</select>
+	
+	<!-- 게시물 수정 -->
+	<update id="boardUpdate" parameterType="com.sist.web.model.Board">
+		UPDATE INS_BOARD
+     	   SET BOARD_CONTENT = #{boardContent}
+		 WHERE BOARD_NUM = #{boardNum}
+	</update>
+	
+	<!-- 게시물 첨부파일 삭제 -->           <!-- boardNum으로 받으니까 long타입 -->
+	<delete id="boardFileDelete" parameterType="long">
+		DELETE FROM INS_BOARD_FILE
+		 WHERE BOARD_NUM = #{boardNum}
+	</delete>
+	
+	<!-- 게시물 삭제 -->
+	<delete id="boardDelete" parameterType="long">
+		DELETE FROM INS_BOARD
+		 WHERE BOARD_NUM = #{boardNum}
+	</delete>
+	
+	<!-- 게시물관리 리스트 -->
+	<select id="boardMgtList" parameterType="com.sist.web.model.Board" resultMap="boardResultMap">
+		SELECT BOARD_NUM,
+	           BOARD_CONTENT,
+	           USER_ID,
+	           USER_NAME,
+	           REG_DATE,
+	           STATUS
+		  FROM (SELECT ROWNUM AS RNUM,
+		               BOARD_NUM,
+		               BOARD_CONTENT,
+		               USER_ID,
+		               USER_NAME,
+		                      REG_DATE,
+		                      STATUS
+		             FROM (SELECT A.BOARD_NUM,
+		                              NVL(A.BOARD_CONTENT, ' ') AS BOARD_CONTENT,
+		                              NVL(A.USER_ID, ' ') AS USER_ID,
+		                              NVL(B.USER_NAME, ' ') AS USER_NAME,
+		                              NVL(TO_CHAR(A.REG_DATE, 'YYYY.MM.DD HH24:MI:SS'), ' ') AS REG_DATE,
+		                              NVL(B.STATUS, ' ') AS STATUS
+		                      FROM INS_BOARD A, INS_USER B
+		                    WHERE 1 = 1
+		                        AND A.USER_ID = B.USER_ID
+		     <if test='userId != null and userId != ""'>                    
+		                        AND A.USER_ID LIKE '%' || #{userId} || '%'
+		     </if>
+		     <if test='userName != null and userName != ""'>                   
+		                        AND B.USER_NAME LIKE '%' || #{userName} || '%'
+		     </if>
+		     <if test='boardContent != null and boardContent != ""'>                    
+		                        AND A.BOARD_CONTENT LIKE '%' || #{boardContent} || '%'
+		     </if>              
+		                    ORDER BY A.REG_DATE DESC))
+		WHERE RNUM <![CDATA[>=]]> #{startRow}
+          AND RNUM <![CDATA[<=]]> #{endRow}
+	</select>
+	<!-- 게시물관리 총 건 수 -->
+	<select id="boardMgtListCount" parameterType="com.sist.web.model.Board" resultType="int">
+		SELECT COUNT(A.BOARD_NUM) AS CNT
+		  FROM INS_BOARD A, INS_USER B
+		 WHERE 1= 1
+		   AND A.USER_ID = B.USER_ID
+		<if test='userId != null and userId != ""'>    
+		   AND  A.USER_ID LIKE '%' || #{userId} || '%'
+		</if>
+		<if test='userName != null and userName != ""'>     
+		   AND B.USER_NAME LIKE '%' || #{userName} || '%'
+		</if>
+		<if test='boardContent != null and boardContent != ""'>    
+		   AND A.BOARD_CONTENT LIKE '%' || #{boardContent} || '%'
+		</if>   
+	</select>
+	
+</mapper>

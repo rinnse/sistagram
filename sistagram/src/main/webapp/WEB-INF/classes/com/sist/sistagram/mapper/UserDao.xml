@@ -1,0 +1,199 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.sist.web.dao.UserDao">
+	<!-- 사용자 resultMap -->
+	<resultMap type="com.sist.web.model.User" id="userResultMap">
+		<id column="USER_ID" property="userId" />
+		<result column="USER_PWD" property="userPwd" />
+		<result column="USER_NAME" property="userName" />
+		<result column="USER_PHONE" property="userPhone" />
+		<result column="USER_EMAIL" property="userEmail" />
+		<result column="USER_INTRO" property="userIntro" />
+		<result column="REG_DATE" property="regDate" />
+		<result column="STATUS" property="status" />
+		<result column="USER_TAG" property="userTag" />
+		
+		<association property="userFile" resultMap="userFileResultMap"/>
+	</resultMap>
+	
+	<!-- 사용자 첨부파일 resultMap -->
+	<resultMap type="com.sist.web.model.UserFile" id="userFileResultMap">
+		<id column="USER_ID" property="useId" />
+		<id column="FILE_NUM" property="fileNum" />
+		<result column="FILE_ORG_NAME" property="fileOrgName" />
+		<result column="FILE_NAME" property="fileName" />
+		<result column="FILE_EXT" property="fileExt" />
+		<result column="FILE_SIZE" property="fileSize" />
+		<result column="REG_DATE" property="regDate" />
+	</resultMap>
+
+	<!-- 사용자 조회 -->
+	<select id="userSelect" parameterType="String" resultMap="userResultMap">
+		SELECT NVL(B.FILE_NAME, '/prof.png') AS FILE_NAME,
+		       A.USER_ID,
+	           NVL(A.USER_PWD, ' ') AS USER_PWD,
+	           NVL(A.USER_NAME, ' ') AS USER_NAME,
+	           NVL(A.USER_PHONE, ' ') AS USER_PHONE,
+	           NVL(A.USER_EMAIL, ' ') AS USER_EMAIL,
+	           NVL(A.USER_INTRO, ' ') AS USER_INTRO,
+	           NVL(TO_CHAR(A.REG_DATE, 'YYYY.MM.DD'), ' ') AS REG_DATE,
+	           NVL(A.STATUS, ' ') AS STATUS,
+	           NVL(A.USER_TAG, ' ') AS USER_TAG
+		  FROM INS_USER A, INS_USER_FILE B
+		 WHERE A.USER_ID = #{userId}
+		   AND A.USER_ID = B.USER_ID(+)
+	</select>
+	
+	<!-- 사용자 등록 -->
+	<insert id="userInsert" parameterType="com.sist.web.model.User">
+		INSERT INTO INS_USER (
+			    USER_ID,
+			    USER_PWD,
+			    USER_NAME,
+			    USER_EMAIL,
+			    REG_DATE,
+			    STATUS,
+			    USER_TAG
+			) VALUES (
+			    #{userId},
+			    #{userPwd},
+			    #{userName},
+			    #{userEmail},
+			    SYSDATE,
+			    #{status},
+			    #{userTag}
+			)
+	</insert>
+
+	<select id="pwSelect" parameterType="com.sist.web.model.User" resultType="int">
+		SELECT USER_PWD,
+         	   USER_NAME
+		  FROM INS_USER
+		 WHERE USER_EMAIL = #{userEmail}
+		    OR USER_ID = #{userId}
+	</select>
+	
+	<!-- 비밀번호 업데이트 -->
+	<update id="pwUpdate" parameterType="com.sist.web.model.User">
+		UPDATE INS_USER
+	       SET USER_PWD = #{userPwd}
+	     WHERE USER_ID = #{userId}
+	</update>
+	
+	<!-- 사용자 프로필 편집 -->
+	<update id="userUpdate" parameterType="com.sist.web.model.User">
+		UPDATE INS_USER
+	       SET USER_NAME = #{userName},
+	           USER_PHONE = #{userPhone},
+	           USER_EMAIL = #{userEmail},
+	           USER_INTRO = #{userIntro},
+	           USER_TAG = #{userTag}
+	     WHERE USER_ID = #{userId}
+	</update>
+	
+	<!-- 사용자 리스트 (검색) -->
+	<select id="userList" parameterType="com.sist.web.model.User" resultMap="userResultMap">
+		SELECT FILE_NAME,
+		       USER_ID,
+	           USER_NAME,
+	           USER_INTRO
+		  FROM (SELECT ROWNUM AS RNUM,
+		               FILE_NAME,
+		               USER_ID,
+		               USER_NAME,
+		               USER_INTRO
+		          FROM (SELECT NVL(B.FILE_NAME, '/prof.png') AS FILE_NAME,
+		                       NVL(A.USER_ID, ' ') AS USER_ID,
+		                       NVL(A.USER_NAME, ' ') AS USER_NAME,
+		                       NVL(A.USER_INTRO, ' ') AS USER_INTRO
+		                  FROM INS_USER A, INS_USER_FILE B
+		                 WHERE 1 = 1
+		                    AND A.USER_ID = B.USER_ID(+)
+                            AND (A.USER_ID LIKE '%' || #{userId} || '%'
+		                    OR A.USER_NAME LIKE '%' || #{userName} || '%'
+		                    OR A.USER_INTRO LIKE '%' || #{userIntro} || '%')
+		                 ORDER BY DBMS_RANDOM.VALUE))
+		                    
+		 WHERE RNUM <![CDATA[>=]]> #{startRow}
+		   AND RNUM <![CDATA[<=]]> #{endRow}
+	</select>
+	
+	<!-- 사용자 총 건 수 조회 -->
+	<select id="userListCount" parameterType="com.sist.web.model.User" resultType="int">
+		SELECT COUNT(USER_ID) AS CNT
+          FROM INS_USER
+	</select>
+	
+	<!-- 회원님을 위한 추천 리스트 -->
+	<select id="userRecommendList" parameterType="com.sist.web.model.User" resultMap="userResultMap">
+		SELECT FILE_NAME,
+          	   USER_ID
+          FROM (SELECT ROWNUM AS RNUM,
+                       FILE_NAME,
+                       USER_ID
+                  FROM (SELECT NVL(B.FILE_NAME, '/prof.png') AS FILE_NAME,
+                               NVL(A.USER_ID, ' ') AS USER_ID
+                          FROM INS_USER A, INS_USER_FILE B
+                         WHERE A.USER_ID = B.USER_ID(+)
+                           AND A.USER_ID != #{userId}
+                         ORDER BY DBMS_RANDOM.VALUE)) 
+		 WHERE RNUM <![CDATA[>=]]> #{startRow}
+		   AND RNUM <![CDATA[<=]]> #{endRow}
+	</select>
+
+	<!-- 관리자용 -->
+	
+	<!-- 회원관리 리스트 -->
+	<select id="userMgtList" parameterType="com.sist.web.model.User" resultMap="userResultMap">
+		SELECT USER_ID,
+		       USER_NAME,
+	           USER_EMAIL,
+	           USER_PHONE,
+	           REG_DATE,
+		       STATUS
+          FROM (SELECT ROWNUM AS RNUM,
+                       USER_ID,
+                       USER_NAME,
+                       USER_EMAIL,
+                       USER_PHONE,
+                       REG_DATE,
+                       STATUS
+		          FROM (SELECT NVL(USER_ID, ' ') AS USER_ID,
+                               NVL(USER_NAME, ' ') AS USER_NAME,
+                               NVL(USER_EMAIL, ' ') AS USER_EMAIL,
+                               NVL(USER_PHONE, ' ') AS USER_PHONE,
+                               NVL(TO_CHAR(REG_DATE, 'YYYY.MM.DD HH24:MI:SS'), ' ') AS REG_DATE,
+                               NVL(STATUS, ' ') AS STATUS
+		                  FROM INS_USER
+		                 WHERE 1 = 1
+		   <if test='userId != null and userId != ""'>               
+                           AND USER_ID LIKE '%' || #{userId} || '%'
+           </if>
+           <if test='userName != null and userName != ""'>                 
+                            AND USER_NAME LIKE '%' || #{userName} || '%'
+           </if>
+           <if test='status != null and status != ""'>                 
+                            AND STATUS LIKE '%' || #{status} || '%'
+           </if>                 
+                         ORDER BY REG_DATE DESC))
+		WHERE RNUM <![CDATA[>=]]> #{startRow} 
+		    AND RNUM <![CDATA[<=]]> #{endRow} 
+	</select>
+	
+	<!-- 회원관리 총 건 수 -->
+	<select id="userMgtListCount" parameterType="com.sist.web.model.User" resultType="int">
+		SELECT COUNT(USER_ID) AS CNT
+		  FROM INS_USER
+		 WHERE 1 = 1
+		<if test='userId != null and userId != ""'>    
+		   AND USER_ID LIKE '%' || #{userId} || '%'
+		</if>
+		<if test='userName != null and userName != ""'>       
+		   AND USER_NAME LIKE '%' || #{userName} || '%'
+		</if>
+		<if test='status != null and status != ""'>        
+		   AND STATUS LIKE '%' || #{status} || '%'
+		</if>   
+	</select>
+	
+</mapper>

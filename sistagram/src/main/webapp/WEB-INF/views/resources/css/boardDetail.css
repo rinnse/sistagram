@@ -1,0 +1,173 @@
+@charset "UTF-8";
+
+@charset "UTF-8";
+
+        body {
+            font: inherit;
+            margin: 0;
+            padding: 0;
+        }
+
+        header {
+            background-color: #333;
+            color: #fff;
+            padding: 10px;
+            text-align: center;
+        }
+
+/*         section { */
+/*             max-width: 600px; */
+/*             margin: 20px auto; */
+/*             padding: 20px; */
+/*             border-radius: 8px; */
+/*             box-shadow: 0 0 10px rgba(0, 0, 0, 0.2); */
+/*             position: relative; */
+/*         } */
+
+        .section-img {
+            max-width: 750px;
+            max-heigth: 700px;
+            margin: 30px auto;
+            padding: 20px;
+            border-radius: 20px;
+            position: relative;
+            background-color:#ivory;
+            display: flex; 
+            align-items: center;"
+/*             box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.5); */
+        }
+
+
+        .section-submit {
+            position: relative;
+            max-width: 1020px;
+            height: auto;
+            margin: 20px auto;
+            margin-left: 30% ;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+            width: 150%;
+        }
+        
+        label {
+           font-size: 15px;
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+        }
+
+        input {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 10px;
+            border: 1px solid #ebebeb;
+            border-radius: 10px;
+            box-sizing: border-box;
+        }
+        
+        .input-search {
+            width: 500px;
+            padding: 10px;
+            margin-bottom: 20px;
+            margin-left: 20px;
+            border: 0px solid #ccc;
+            border-radius: 10px;
+            box-sizing: border-box;
+            background-color:#ebebeb;
+            outline: none; /* 클릭시 테두리 제거 */
+        }
+        
+        .showPw {
+          position: absolute;
+          top: 55%;
+          right: 5%;
+          width: auto;
+          height: auto;
+          transform: translateY(-50%);
+          cursor: pointer;
+          border: none;
+          background-color: #fff;
+          visibility: hidden;
+          position: absolute; 
+/*          vertical-align: middle; */
+      }
+
+
+
+
+        
+/*         .user-list:hover{ */
+/*            background-color: #ebebeb; */
+/*         } */
+
+.comment-list{
+   padding: 4px;
+   
+}
+
+.btn-comment {
+   background-color: #ebebeb;
+   width: 100%;
+   color: black;
+   padding: 10px 70px;
+   border: none;
+   border-radius: 10px;
+   cursor: pointer;
+   /*             font-weight: bold; */
+   font: inherit;
+   position: relative;
+   box-sizing: border-box;
+}
+        
+.boardDetail-img{
+   flex-grow: 1; 
+   display: flex; 
+   align-items: center; 
+   background-color:gray;
+   border-radius: 5px;
+}
+
+
+.boardUpload-image {
+    width: 500px;
+    height: 500px;
+    object-fit: cover;
+    border-radius: 10%;
+    margin-bottom: 0px;
+}
+
+.userId-container{
+   font-weight:bold;
+   font-size:20px;
+}
+.userName-container {
+   font-weight:bold;
+   font-size:14px;
+}
+.follow-board{
+   
+}
+.userIntro-container{
+   font-size:12px;
+}
+.button-img {
+    background-color: #2c84dc;
+    color: #fff;
+    padding: 10px 15px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+/*             font-weight: bold; */
+    font: inherit;
+    position: relative;
+}
+
+.userInfo-container {
+    float: right; /* 버튼을 오른쪽으로 배치 */
+    margin-top: 10px; /* 원하는 위치로 조정 */
+    margin-left: 100px;
+}
+.profile-image-container{
+/*    margin-right:10%; */
+}
